@@ -12,7 +12,7 @@ import ConfigurationView from './components/ConfigurationView';
 import { SavedPlan, Transaction } from './types';
 import SignIn from './components/SignIn';
 import SignUp from './components/SignUp';
-import { supabase, signOut as supabaseSignOut, fetchUserProfileSummary, type UserProfileSummary, getProfile, upsertProfile, loadPlans, savePlans, upsertPlan, deletePlan as deletePlanRemote, loadTransactions, saveTransactions, appendTransaction, recordActivity } from './services/supabaseClient';
+import { supabase, isSupabaseConfigured, signOut as supabaseSignOut, fetchUserProfileSummary, type UserProfileSummary, getProfile, upsertProfile, loadPlans, savePlans, upsertPlan, deletePlan as deletePlanRemote, loadTransactions, saveTransactions, appendTransaction, recordActivity } from './services/supabaseClient';
 
 const App: React.FC = () => {
     const [theme, setTheme] = useState(() => {
@@ -321,6 +321,20 @@ const App: React.FC = () => {
         const localFlag = localStorage.getItem(`hasOnboarded:${account.id}`) === 'true';
         if (localFlag) setHasOnboarded(true);
     }, [account?.id]);
+
+    // If Supabase isn't configured, show clear error
+    if (!isSupabaseConfigured) {
+        return (
+            <div className={`flex items-center justify-center h-screen bg-[var(--bg-color)] text-[var(--color-text-primary)] ${theme}`}>
+                <div className="neumorphic-pane rounded-xl px-6 py-4 max-w-lg text-center">
+                    <div className="text-xl font-bold mb-2">Configuration required</div>
+                    <div className="text-[var(--color-text-secondary)] text-sm">
+                        Missing Supabase configuration. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your environment and redeploy.
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     // If not authenticated, show auth pages
     if (!session) {

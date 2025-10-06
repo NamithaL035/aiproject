@@ -4,6 +4,8 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = typeof import.meta !== 'undefined' ? (import.meta as any).env?.VITE_SUPABASE_URL : undefined;
 const SUPABASE_ANON_KEY = typeof import.meta !== 'undefined' ? (import.meta as any).env?.VITE_SUPABASE_ANON_KEY : undefined;
 
+export const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     // Visible error to help configure environments correctly
     console.error('[Supabase] Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY. Configure your environment variables.');
