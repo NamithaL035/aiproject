@@ -10,6 +10,9 @@ import MyPlansView from './components/MyPlansView';
 import OnboardingWizard from './components/OnboardingWizard';
 import ConfigurationView from './components/ConfigurationView';
 import { SavedPlan, Transaction } from './types';
+import SignIn from './components/SignIn';
+import SignUp from './components/SignUp';
+import { supabase, signOut as supabaseSignOut } from './services/supabaseClient';
 
 const App: React.FC = () => {
     const [theme, setTheme] = useState(() => {
@@ -31,6 +34,10 @@ const App: React.FC = () => {
 
     const [activeView, setActiveView] = useState('Dashboard');
     const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    // Auth state
+    const [session, setSession] = useState<import('@supabase/supabase-js').Session | null>(null);
+    const [authView, setAuthView] = useState<'signin' | 'signup'>('signin');
 
     const [savedPlans, setSavedPlans] = useState<SavedPlan[]>(() => {
         try {
@@ -150,7 +157,7 @@ const App: React.FC = () => {
         setIsFamilyMode(prev => !prev);
     };
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
         // Clear all app-related data from localStorage
         localStorage.removeItem('hasOnboarded');
         localStorage.removeItem('transactions');
@@ -165,6 +172,9 @@ const App: React.FC = () => {
         setUserProfile({ familySize: '2', diet: 'Vegetarian' });
         setIsFamilyMode(false);
         setActiveView('Dashboard');
+
+        // Sign out from Supabase
+        try { await supabaseSignOut(); } catch {}
     };
 
     const handleSetActiveView = (view: string) => {
@@ -200,6 +210,46 @@ const App: React.FC = () => {
                 return <DashboardView setActiveView={handleSetActiveView} transactions={transactions} plans={savedPlans} isFamilyMode={isFamilyMode} />;
         }
     };
+
+    // Initialize and listen for Supabase auth session
+    useEffect(() => {
+        let mounted = true;
+        (async () => {
+            const { data } = await supabase.auth.getSession();
+            if (mounted) setSession(data.session);
+        })();
+        const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
+            setSession(newSession);
+            if (newSession) {
+                // After OAuth redirect, keep user in app
+                setAuthView('signin');
+            }
+        });
+        return () => {
+            mounted = false;
+            sub.subscription.unsubscribe();
+        };
+    }, []);
+
+    // If not authenticated, show auth pages
+    if (!session) {
+        return authView === 'signin' ? (
+            <SignIn
+                onSignedIn={() => {
+                    // session listener will handle state; we also try to load immediately
+                    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+                }}
+                onSwitchToSignUp={() => setAuthView('signup')}
+            />
+        ) : (
+            <SignUp
+                onSignedUp={() => {
+                    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+                }}
+                onSwitchToSignIn={() => setAuthView('signin')}
+            />
+        );
+    }
 
     if (!hasOnboarded) {
         return <OnboardingWizard onComplete={handleOnboardingComplete} />;
