@@ -11,6 +11,8 @@ interface HeaderProps {
     onLogout: () => void;
     isFamilyMode: boolean;
     toggleFamilyMode: () => void;
+    userName?: string;
+    userAvatarUrl?: string;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -22,6 +24,8 @@ const Header: React.FC<HeaderProps> = ({
     onLogout,
     isFamilyMode,
     toggleFamilyMode,
+    userName = 'User',
+    userAvatarUrl = 'https://i.pravatar.cc/40',
 }) => {
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -74,8 +78,8 @@ const Header: React.FC<HeaderProps> = ({
                                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                                 className="flex items-center gap-2 p-2 rounded-full neumorphic-convex"
                            >
-                               <img className="w-8 h-8 rounded-full" src="https://i.pravatar.cc/40" alt="User" />
-                               <span className="hidden md:block text-sm font-semibold text-[var(--color-text-primary)]">Admin</span>
+                               <img className="w-8 h-8 rounded-full" src={userAvatarUrl} alt={userName} />
+                               <span className="hidden md:block text-sm font-semibold text-[var(--color-text-primary)]">{userName}</span>
                                <ChevronDownIcon />
                            </button>
 

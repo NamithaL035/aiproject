@@ -23,5 +23,24 @@ export async function signOut() {
     return await supabase.auth.signOut();
 }
 
+export type UserProfileSummary = {
+    id: string;
+    email: string | null;
+    name: string;
+    avatarUrl: string;
+};
 
-
+export async function fetchUserProfileSummary(): Promise<UserProfileSummary | null> {
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data.user) return null;
+    const user = data.user;
+    const meta: any = user.user_metadata || {};
+    const name = meta.name || meta.full_name || meta.user_name || (user.email ? user.email.split('@')[0] : 'User');
+    const avatar = meta.avatar_url || meta.picture || `https://i.pravatar.cc/100?u=${encodeURIComponent(user.id)}`;
+    return {
+        id: user.id,
+        email: user.email ?? null,
+        name,
+        avatarUrl: avatar,
+    };
+}

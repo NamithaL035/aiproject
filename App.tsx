@@ -12,7 +12,7 @@ import ConfigurationView from './components/ConfigurationView';
 import { SavedPlan, Transaction } from './types';
 import SignIn from './components/SignIn';
 import SignUp from './components/SignUp';
-import { supabase, signOut as supabaseSignOut } from './services/supabaseClient';
+import { supabase, signOut as supabaseSignOut, fetchUserProfileSummary, type UserProfileSummary } from './services/supabaseClient';
 
 const App: React.FC = () => {
     const [theme, setTheme] = useState(() => {
@@ -38,6 +38,7 @@ const App: React.FC = () => {
     // Auth state
     const [session, setSession] = useState<import('@supabase/supabase-js').Session | null>(null);
     const [authView, setAuthView] = useState<'signin' | 'signup'>('signin');
+    const [account, setAccount] = useState<UserProfileSummary | null>(null);
 
     const [savedPlans, setSavedPlans] = useState<SavedPlan[]>(() => {
         try {
@@ -216,13 +217,23 @@ const App: React.FC = () => {
         let mounted = true;
         (async () => {
             const { data } = await supabase.auth.getSession();
-            if (mounted) setSession(data.session);
+            if (mounted) {
+                setSession(data.session);
+                if (data.session) {
+                    fetchUserProfileSummary().then(setAccount).catch(() => setAccount(null));
+                } else {
+                    setAccount(null);
+                }
+            }
         })();
         const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
             setSession(newSession);
             if (newSession) {
                 // After OAuth redirect, keep user in app
                 setAuthView('signin');
+                fetchUserProfileSummary().then(setAccount).catch(() => setAccount(null));
+            } else {
+                setAccount(null);
             }
         });
         return () => {
@@ -274,6 +285,8 @@ const App: React.FC = () => {
                     onLogout={handleLogout}
                     isFamilyMode={isFamilyMode}
                     toggleFamilyMode={toggleFamilyMode}
+                    userName={account?.name || 'User'}
+                    userAvatarUrl={account?.avatarUrl || 'https://i.pravatar.cc/40'}
                 />
                 <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6 lg:p-8">
                     {renderView()}
