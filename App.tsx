@@ -12,7 +12,7 @@ import ConfigurationView from './components/ConfigurationView';
 import { SavedPlan, Transaction } from './types';
 import SignIn from './components/SignIn';
 import SignUp from './components/SignUp';
-import { supabase, signOut as supabaseSignOut, fetchUserProfileSummary, type UserProfileSummary } from './services/supabaseClient';
+import { supabase, signOut as supabaseSignOut, fetchUserProfileSummary, type UserProfileSummary, getProfile, upsertProfile, loadPlans, savePlans, upsertPlan, deletePlan as deletePlanRemote, loadTransactions, saveTransactions, appendTransaction, recordActivity } from './services/supabaseClient';
 
 const App: React.FC = () => {
     const [theme, setTheme] = useState(() => {
@@ -61,15 +61,27 @@ const App: React.FC = () => {
     });
 
     useEffect(() => {
-        if(hasOnboarded) localStorage.setItem('savedPlans', JSON.stringify(savedPlans));
+        if (hasOnboarded) {
+            localStorage.setItem('savedPlans', JSON.stringify(savedPlans));
+            // Persist to Supabase (fire and forget)
+            savePlans(savedPlans).catch(() => {});
+        }
     }, [savedPlans, hasOnboarded]);
 
     useEffect(() => {
-       if(hasOnboarded) localStorage.setItem('transactions', JSON.stringify(transactions));
+       if (hasOnboarded) {
+           localStorage.setItem('transactions', JSON.stringify(transactions));
+           // Persist to Supabase (fire and forget)
+           saveTransactions(transactions).catch(() => {});
+       }
     }, [transactions, hasOnboarded]);
     
     useEffect(() => {
-        if(hasOnboarded) localStorage.setItem('userProfile', JSON.stringify(userProfile));
+        if (hasOnboarded) {
+            localStorage.setItem('userProfile', JSON.stringify(userProfile));
+            // Persist profile to Supabase
+            fetchUserProfileSummary().then(summary => upsertProfile({ hasOnboarded: true, profile: userProfile, summary })).catch(() => {});
+        }
     }, [userProfile, hasOnboarded]);
 
     useEffect(() => {
@@ -105,11 +117,18 @@ const App: React.FC = () => {
             category: exp.category
         }));
 
-        setTransactions([...incomeTransactions, ...expenseTransactions]);
+        const merged = [...incomeTransactions, ...expenseTransactions];
+        setTransactions(merged);
         setUserProfile(profile);
 
         localStorage.setItem('hasOnboarded', 'true');
         setHasOnboarded(true);
+        // Persist onboarding data
+        fetchUserProfileSummary()
+            .then(summary => upsertProfile({ hasOnboarded: true, profile, summary }))
+            .catch(() => {});
+        saveTransactions(merged).catch(() => {});
+        recordActivity('onboarding_completed').catch(() => {});
     };
 
 
@@ -121,14 +140,21 @@ const App: React.FC = () => {
         };
         setSavedPlans(prev => [...prev, newPlan]);
         setActiveView('My Plans'); // Navigate to My Plans after saving
+        // Persist
+        upsertPlan(newPlan).catch(() => {});
+        recordActivity('plan_created', { id: newPlan.id }).catch(() => {});
     };
 
     const updatePlan = (updatedPlan: SavedPlan) => {
         setSavedPlans(prev => prev.map(p => p.id === updatedPlan.id ? updatedPlan : p));
+        upsertPlan(updatedPlan).catch(() => {});
+        recordActivity('plan_updated', { id: updatedPlan.id }).catch(() => {});
     };
 
     const deletePlan = (planId: string) => {
         setSavedPlans(prev => prev.filter(p => p.id !== planId));
+        deletePlanRemote(planId).catch(() => {});
+        recordActivity('plan_deleted', { id: planId }).catch(() => {});
     };
 
     const addTransaction = (transaction: Omit<Transaction, 'id'>) => {
@@ -137,6 +163,9 @@ const App: React.FC = () => {
             id: new Date().toISOString(),
         };
         setTransactions(prev => [...prev, newTransaction]);
+        // Persist incrementally
+        appendTransaction(newTransaction as any).catch(() => {});
+        recordActivity('transaction_added', { id: newTransaction.id, type: newTransaction.type }).catch(() => {});
     };
 
     useEffect(() => {
@@ -221,6 +250,18 @@ const App: React.FC = () => {
                 setSession(data.session);
                 if (data.session) {
                     fetchUserProfileSummary().then(setAccount).catch(() => setAccount(null));
+                    // Load cloud data for returning users
+                    Promise.all([getProfile(), loadPlans(), loadTransactions()])
+                        .then(([prof, plans, txs]) => {
+                            if (!mounted) return;
+                            if (prof?.hasOnboarded) {
+                                setHasOnboarded(true);
+                                if (prof.profile) setUserProfile(prof.profile);
+                            }
+                            if (plans && plans.length) setSavedPlans(plans as any);
+                            if (txs && txs.length) setTransactions(txs as any);
+                        })
+                        .catch(() => {});
                 } else {
                     setAccount(null);
                 }
@@ -232,6 +273,16 @@ const App: React.FC = () => {
                 // After OAuth redirect, keep user in app
                 setAuthView('signin');
                 fetchUserProfileSummary().then(setAccount).catch(() => setAccount(null));
+                Promise.all([getProfile(), loadPlans(), loadTransactions()])
+                    .then(([prof, plans, txs]) => {
+                        if (prof?.hasOnboarded) {
+                            setHasOnboarded(true);
+                            if (prof.profile) setUserProfile(prof.profile);
+                        }
+                        if (plans && plans.length) setSavedPlans(plans as any);
+                        if (txs && txs.length) setTransactions(txs as any);
+                    })
+                    .catch(() => {});
             } else {
                 setAccount(null);
             }

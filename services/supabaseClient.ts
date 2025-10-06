@@ -44,3 +44,114 @@ export async function fetchUserProfileSummary(): Promise<UserProfileSummary | nu
         avatarUrl: avatar,
     };
 }
+
+// Domain models used in the app
+export type AppTransaction = {
+    id: string;
+    type: 'income' | 'expense';
+    description: string;
+    amount: number;
+    date: string;
+    category: string;
+};
+
+export type AppSavedPlan = {
+    id: string;
+    date: string;
+    title?: string;
+    items?: any[];
+};
+
+// Persistence helpers
+async function getCurrentUserId(): Promise<string | null> {
+    const { data } = await supabase.auth.getUser();
+    return data.user?.id ?? null;
+}
+
+export async function upsertProfile(payload: { hasOnboarded: boolean; profile: any; summary?: UserProfileSummary }): Promise<void> {
+    const userId = await getCurrentUserId();
+    if (!userId) return;
+    const row = {
+        id: userId,
+        has_onboarded: payload.hasOnboarded,
+        profile: payload.profile,
+        name: payload.summary?.name ?? null,
+        avatar_url: payload.summary?.avatarUrl ?? null,
+        email: payload.summary?.email ?? null,
+    };
+    await supabase.from('profiles').upsert(row, { onConflict: 'id' });
+}
+
+export async function getProfile(): Promise<{ hasOnboarded: boolean; profile: any } | null> {
+    const userId = await getCurrentUserId();
+    if (!userId) return null;
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('has_onboarded, profile')
+        .eq('id', userId)
+        .maybeSingle();
+    if (error || !data) return null;
+    return { hasOnboarded: !!data.has_onboarded, profile: data.profile ?? null };
+}
+
+export async function saveTransactions(transactions: AppTransaction[]): Promise<void> {
+    const userId = await getCurrentUserId();
+    if (!userId) return;
+    const rows = transactions.map(t => ({ ...t, user_id: userId }));
+    await supabase.from('transactions').upsert(rows, { onConflict: 'id' });
+}
+
+export async function appendTransaction(transaction: AppTransaction): Promise<void> {
+    const userId = await getCurrentUserId();
+    if (!userId) return;
+    await supabase.from('transactions').upsert([{ ...transaction, user_id: userId }], { onConflict: 'id' });
+}
+
+export async function loadTransactions(): Promise<AppTransaction[]> {
+    const userId = await getCurrentUserId();
+    if (!userId) return [];
+    const { data, error } = await supabase
+        .from('transactions')
+        .select('id, type, description, amount, date, category')
+        .eq('user_id', userId)
+        .order('date', { ascending: true });
+    if (error || !data) return [];
+    return data as AppTransaction[];
+}
+
+export async function savePlans(plans: AppSavedPlan[]): Promise<void> {
+    const userId = await getCurrentUserId();
+    if (!userId) return;
+    const rows = plans.map(p => ({ id: p.id, user_id: userId, plan: p }));
+    await supabase.from('plans').upsert(rows, { onConflict: 'id' });
+}
+
+export async function upsertPlan(plan: AppSavedPlan): Promise<void> {
+    const userId = await getCurrentUserId();
+    if (!userId) return;
+    await supabase.from('plans').upsert([{ id: plan.id, user_id: userId, plan }], { onConflict: 'id' });
+}
+
+export async function deletePlan(id: string): Promise<void> {
+    const userId = await getCurrentUserId();
+    if (!userId) return;
+    await supabase.from('plans').delete().eq('id', id).eq('user_id', userId);
+}
+
+export async function loadPlans(): Promise<AppSavedPlan[]> {
+    const userId = await getCurrentUserId();
+    if (!userId) return [];
+    const { data, error } = await supabase
+        .from('plans')
+        .select('plan')
+        .eq('user_id', userId)
+        .order('plan->date', { ascending: false });
+    if (error || !data) return [];
+    return data.map((r: any) => r.plan) as AppSavedPlan[];
+}
+
+export async function recordActivity(action: string, metadata?: any): Promise<void> {
+    const userId = await getCurrentUserId();
+    if (!userId) return;
+    await supabase.from('activities').insert({ user_id: userId, action, metadata: metadata ?? null });
+}
