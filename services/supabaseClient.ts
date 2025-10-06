@@ -1,11 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 
-// For local development, we read from Vite env if available; otherwise fall back to hardcoded values provided by the user.
-// In production, prefer environment variables via import.meta.env.
-const SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_URL) || 'https://ahdwmagkquavrmwsvzml.supabase.co';
-const SUPABASE_ANON_KEY = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_ANON_KEY) || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFoZHdtYWdrcXVhdnJtd3N2em1sIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1OTc0NjgxNiwiZXhwIjoyMDc1MzIyODE2fQ.EqyPFRms7ZCvBFUmMTgbGfX_3eW3uOLIcTrVnzr7J3I';
+// Require explicit env configuration to avoid writing to the wrong project
+const SUPABASE_URL = typeof import.meta !== 'undefined' ? (import.meta as any).env?.VITE_SUPABASE_URL : undefined;
+const SUPABASE_ANON_KEY = typeof import.meta !== 'undefined' ? (import.meta as any).env?.VITE_SUPABASE_ANON_KEY : undefined;
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    // Visible error to help configure environments correctly
+    console.error('[Supabase] Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY. Configure your environment variables.');
+}
+
+export const supabase = createClient(SUPABASE_URL || '', SUPABASE_ANON_KEY || '');
 
 export async function signInWithEmail(email: string, password: string) {
     return await supabase.auth.signInWithPassword({ email, password });
