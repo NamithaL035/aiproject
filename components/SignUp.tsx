@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { signUpWithEmail, signInWithGoogle } from '../services/supabaseClient';
+import { GoogleIcon } from './icons';
 
 interface SignUpProps {
     onSignedUp: () => void;
@@ -40,51 +41,57 @@ const SignUp: React.FC<SignUpProps> = ({ onSignedUp, onSwitchToSignIn }) => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-[var(--bg-color)] p-4">
-            <div className="w-full max-w-md rounded-xl shadow-lg p-6 bg-[var(--card-bg,#111213)] text-[var(--color-text-primary)]">
-                <h1 className="text-2xl font-semibold mb-6 text-center">Sign Up</h1>
+        <div className="min-h-screen flex items-center justify-center p-4 bg-[var(--bg-color)]">
+            <div className="w-full max-w-md neumorphic-pane rounded-2xl p-6 sm:p-8">
+                <div className="text-center mb-6">
+                    <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--color-text-primary)]">Create your account</h1>
+                    <p className="mt-2 text-sm text-[var(--color-text-secondary)]">Get started in seconds</p>
+                </div>
                 <form onSubmit={handleEmailSignUp} className="space-y-4">
-                    <div>
-                        <label className="block mb-1 text-sm">Email</label>
+                    <div className="neumorphic-inset rounded-xl p-3">
+                        <label className="block mb-1 text-xs sm:text-sm text-[var(--color-text-secondary)]">Email</label>
                         <input
                             type="email"
-                            className="w-full px-3 py-2 rounded-md bg-transparent border border-[var(--border-color,#2a2a2a)] focus:outline-none"
+                            className="w-full bg-transparent outline-none text-[var(--color-text-primary)] placeholder-[var(--color-text-secondary)]"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
+                            placeholder="you@example.com"
                         />
                     </div>
-                    <div>
-                        <label className="block mb-1 text-sm">Password</label>
+                    <div className="neumorphic-inset rounded-xl p-3">
+                        <label className="block mb-1 text-xs sm:text-sm text-[var(--color-text-secondary)]">Password</label>
                         <input
                             type="password"
-                            className="w-full px-3 py-2 rounded-md bg-transparent border border-[var(--border-color,#2a2a2a)] focus:outline-none"
+                            className="w-full bg-transparent outline-none text-[var(--color-text-primary)] placeholder-[var(--color-text-secondary)]"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
+                            placeholder="••••••••"
                         />
                     </div>
-                    {error && <div className="text-red-500 text-sm">{error}</div>}
-                    {message && <div className="text-green-500 text-sm">{message}</div>}
+                    {error && <div className="text-red-500 text-xs sm:text-sm">{error}</div>}
+                    {message && <div className="text-green-500 text-xs sm:text-sm">{message}</div>}
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full py-2 rounded-md bg-blue-600 hover:bg-blue-700 transition disabled:opacity-50"
+                        className="w-full py-2 sm:py-3 rounded-xl font-semibold text-white bg-[var(--color-primary,#2563eb)] hover:opacity-95 transition disabled:opacity-50 neumorphic-convex"
                     >
                         {loading ? 'Creating account...' : 'Create Account'}
                     </button>
                 </form>
-                <div className="my-4 text-center text-sm opacity-70">or</div>
+                <div className="my-4 text-center text-xs sm:text-sm text-[var(--color-text-secondary)]">or</div>
                 <button
                     onClick={handleGoogle}
                     disabled={loading}
-                    className="w-full py-2 rounded-md bg-white text-black hover:opacity-90 transition disabled:opacity-50"
+                    className="w-full py-2 sm:py-3 rounded-xl flex items-center justify-center gap-2 bg-white text-black dark:bg-[#1a1a1a] dark:text-[var(--color-text-primary)] hover:opacity-95 transition disabled:opacity-50 neumorphic-convex"
                 >
-                    Continue with Google
+                    <GoogleIcon className="w-5 h-5" />
+                    <span>Continue with Google</span>
                 </button>
-                <div className="mt-4 text-sm text-center">
+                <div className="mt-4 text-xs sm:text-sm text-center text-[var(--color-text-secondary)]">
                     Already have an account?{' '}
-                    <button className="underline" onClick={onSwitchToSignIn}>Sign In</button>
+                    <button className="underline text[var(--color-text-primary)]" onClick={onSwitchToSignIn}>Sign In</button>
                 </div>
             </div>
         </div>
