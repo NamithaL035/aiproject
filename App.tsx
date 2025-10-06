@@ -24,7 +24,8 @@ const App: React.FC = () => {
         return 'light';
     });
 
-    const [hasOnboarded, setHasOnboarded] = useState(() => localStorage.getItem('hasOnboarded') === 'true');
+    // Per-user onboarding flag (namespaced by user id)
+    const [hasOnboarded, setHasOnboarded] = useState(false);
     const [isFamilyMode, setIsFamilyMode] = useState(() => {
         const stored = localStorage.getItem('isFamilyMode');
         // Default ON if not set
@@ -126,7 +127,9 @@ const App: React.FC = () => {
         setTransactions(merged);
         setUserProfile(profile);
 
-        localStorage.setItem('hasOnboarded', 'true');
+        if (account?.id) {
+            localStorage.setItem(`hasOnboarded:${account.id}`, 'true');
+        }
         setHasOnboarded(true);
         // Persist onboarding data
         fetchUserProfileSummary()
@@ -194,7 +197,6 @@ const App: React.FC = () => {
 
     const handleLogout = async () => {
         // Clear all app-related data from localStorage
-        localStorage.removeItem('hasOnboarded');
         localStorage.removeItem('transactions');
         localStorage.removeItem('savedPlans');
         localStorage.removeItem('userProfile');
@@ -264,7 +266,7 @@ const App: React.FC = () => {
                             const hasTxs = !!(txs && txs.length);
                             if (prof?.hasOnboarded || hasPlans || hasTxs) {
                                 setHasOnboarded(true);
-                                localStorage.setItem('hasOnboarded', 'true');
+                                if (account?.id) localStorage.setItem(`hasOnboarded:${account.id}`, 'true');
                                 if (prof?.profile) setUserProfile(prof.profile);
                             }
                             if (plans && plans.length) setSavedPlans(plans as any);
@@ -291,7 +293,7 @@ const App: React.FC = () => {
                         const hasTxs = !!(txs && txs.length);
                         if (prof?.hasOnboarded || hasPlans || hasTxs) {
                             setHasOnboarded(true);
-                            localStorage.setItem('hasOnboarded', 'true');
+                            if (account?.id) localStorage.setItem(`hasOnboarded:${account.id}`, 'true');
                             if (prof?.profile) setUserProfile(prof.profile);
                         }
                         if (plans && plans.length) setSavedPlans(plans as any);
@@ -309,6 +311,16 @@ const App: React.FC = () => {
             sub.subscription.unsubscribe();
         };
     }, []);
+
+    // Sync hasOnboarded state from per-user local flag when account changes
+    useEffect(() => {
+        if (!account?.id) {
+            setHasOnboarded(false);
+            return;
+        }
+        const localFlag = localStorage.getItem(`hasOnboarded:${account.id}`) === 'true';
+        if (localFlag) setHasOnboarded(true);
+    }, [account?.id]);
 
     // If not authenticated, show auth pages
     if (!session) {
