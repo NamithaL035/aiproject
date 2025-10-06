@@ -25,7 +25,11 @@ const App: React.FC = () => {
     });
 
     const [hasOnboarded, setHasOnboarded] = useState(() => localStorage.getItem('hasOnboarded') === 'true');
-    const [isFamilyMode, setIsFamilyMode] = useState(() => localStorage.getItem('isFamilyMode') === 'true');
+    const [isFamilyMode, setIsFamilyMode] = useState(() => {
+        const stored = localStorage.getItem('isFamilyMode');
+        // Default ON if not set
+        return stored === null ? true : stored === 'true';
+    });
     
     const [userProfile, setUserProfile] = useState(() => {
         const storedProfile = localStorage.getItem('userProfile');
@@ -260,6 +264,7 @@ const App: React.FC = () => {
                             const hasTxs = !!(txs && txs.length);
                             if (prof?.hasOnboarded || hasPlans || hasTxs) {
                                 setHasOnboarded(true);
+                                localStorage.setItem('hasOnboarded', 'true');
                                 if (prof?.profile) setUserProfile(prof.profile);
                             }
                             if (plans && plans.length) setSavedPlans(plans as any);
@@ -286,6 +291,7 @@ const App: React.FC = () => {
                         const hasTxs = !!(txs && txs.length);
                         if (prof?.hasOnboarded || hasPlans || hasTxs) {
                             setHasOnboarded(true);
+                            localStorage.setItem('hasOnboarded', 'true');
                             if (prof?.profile) setUserProfile(prof.profile);
                         }
                         if (plans && plans.length) setSavedPlans(plans as any);
