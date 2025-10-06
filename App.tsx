@@ -39,6 +39,7 @@ const App: React.FC = () => {
     const [session, setSession] = useState<import('@supabase/supabase-js').Session | null>(null);
     const [authView, setAuthView] = useState<'signin' | 'signup'>('signin');
     const [account, setAccount] = useState<UserProfileSummary | null>(null);
+    const [cloudInitDone, setCloudInitDone] = useState(false);
 
     const [savedPlans, setSavedPlans] = useState<SavedPlan[]>(() => {
         try {
@@ -249,21 +250,26 @@ const App: React.FC = () => {
             if (mounted) {
                 setSession(data.session);
                 if (data.session) {
+                    setCloudInitDone(false);
                     fetchUserProfileSummary().then(setAccount).catch(() => setAccount(null));
                     // Load cloud data for returning users
                     Promise.all([getProfile(), loadPlans(), loadTransactions()])
                         .then(([prof, plans, txs]) => {
                             if (!mounted) return;
-                            if (prof?.hasOnboarded) {
+                            const hasPlans = !!(plans && plans.length);
+                            const hasTxs = !!(txs && txs.length);
+                            if (prof?.hasOnboarded || hasPlans || hasTxs) {
                                 setHasOnboarded(true);
-                                if (prof.profile) setUserProfile(prof.profile);
+                                if (prof?.profile) setUserProfile(prof.profile);
                             }
                             if (plans && plans.length) setSavedPlans(plans as any);
                             if (txs && txs.length) setTransactions(txs as any);
+                            setCloudInitDone(true);
                         })
                         .catch(() => {});
                 } else {
                     setAccount(null);
+                    setCloudInitDone(true);
                 }
             }
         })();
@@ -272,19 +278,24 @@ const App: React.FC = () => {
             if (newSession) {
                 // After OAuth redirect, keep user in app
                 setAuthView('signin');
+                setCloudInitDone(false);
                 fetchUserProfileSummary().then(setAccount).catch(() => setAccount(null));
                 Promise.all([getProfile(), loadPlans(), loadTransactions()])
                     .then(([prof, plans, txs]) => {
-                        if (prof?.hasOnboarded) {
+                        const hasPlans = !!(plans && plans.length);
+                        const hasTxs = !!(txs && txs.length);
+                        if (prof?.hasOnboarded || hasPlans || hasTxs) {
                             setHasOnboarded(true);
-                            if (prof.profile) setUserProfile(prof.profile);
+                            if (prof?.profile) setUserProfile(prof.profile);
                         }
                         if (plans && plans.length) setSavedPlans(plans as any);
                         if (txs && txs.length) setTransactions(txs as any);
+                        setCloudInitDone(true);
                     })
                     .catch(() => {});
             } else {
                 setAccount(null);
+                setCloudInitDone(true);
             }
         });
         return () => {
@@ -314,6 +325,13 @@ const App: React.FC = () => {
     }
 
     if (!hasOnboarded) {
+        if (!cloudInitDone) {
+            return (
+                <div className={`flex items-center justify-center h-screen bg-[var(--bg-color)] text-[var(--color-text-primary)] ${theme}`}>
+                    <div className="neumorphic-pane rounded-xl px-6 py-4">Loading your data…</div>
+                </div>
+            );
+        }
         return <OnboardingWizard onComplete={handleOnboardingComplete} />;
     }
 
