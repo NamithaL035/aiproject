@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SavvySpend AI - Smart Grocery & Expense Manager</title>
+    <script type="importmap">
+    {
+      "imports": {
+        "react/": "https://aistudiocdn.com/react@^19.1.1/",
+        "react": "https://aistudiocdn.com/react@^19.1.1",
+        "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+        "@google/genai": "https://aistudiocdn.com/@google/genai@^1.20.0"
+      }
+    }
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --light-bg: #e0e5ec;
+        --light-text-primary: #374151;
+        --light-text-secondary: #6b7280;
+        --light-primary: #3B82F6;
+        --light-shadow-dark: #a3b1c6;
+        --light-shadow-light: #ffffff;
+
+        --bg-color: var(--light-bg);
+        --color-text-primary: var(--light-text-primary);
+        --color-text-secondary: var(--light-text-secondary);
+        --color-primary: var(--light-primary);
+        --color-primary-rgb: 59, 130, 246;
+        --shadow-dark: var(--light-shadow-dark);
+        --shadow-light: var(--light-shadow-light);
+      }
+
+      .dark {
+        --dark-bg: #2c3036;
+        --dark-text-primary: #e5e7eb;
+        --dark-text-secondary: #9ca3af;
+        --dark-primary: #60A5FA;
+        --dark-shadow-dark: #22252a;
+        --dark-shadow-light: #363b42;
+
+        --bg-color: var(--dark-bg);
+        --color-text-primary: var(--dark-text-primary);
+        --color-text-secondary: var(--dark-text-secondary);
+        --color-primary: var(--dark-primary);
+        --color-primary-rgb: 96, 165, 250;
+        --shadow-dark: var(--dark-shadow-dark);
+        --shadow-light: var(--dark-shadow-light);
+      }
+
+      body {
+        font-family: 'Open Sans', sans-serif;
+        background-color: var(--bg-color);
+        color: var(--color-text-primary);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        overflow: hidden;
+        position: relative;
+        transition: background-color 0.3s ease;
+      }
+      
+      h1, h2, h3, h4, h5, h6 {
+        font-family: 'Poppins', sans-serif;
+      }
+
+      /* Neumorphic Component Styles */
+      .card, .neumorphic-pane {
+        background-color: var(--bg-color);
+        border-radius: 1.25rem; /* 20px */
+        padding: 1.5rem;
+        box-shadow: 8px 8px 16px var(--shadow-dark), -8px -8px 16px var(--shadow-light);
+        transition: box-shadow 0.3s ease;
+      }
+
+      .btn-primary {
+        font-weight: 600;
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.75rem;
+        color: var(--color-primary);
+        transition: all 0.2s ease-in-out;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        border: none;
+        cursor: pointer;
+        outline: none;
+        background-color: var(--bg-color);
+        box-shadow: 6px 6px 12px var(--shadow-dark), -6px -6px 12px var(--shadow-light);
+      }
+      .btn-primary:hover {
+        color: var(--color-primary);
+        box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light);
+      }
+      .btn-primary:active, .btn-primary.active {
+        box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light);
+      }
+      .btn-primary:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+        color: var(--color-text-secondary);
+        box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light) !important;
+      }
+      
+      .btn-icon {
+        padding: 0.75rem;
+        border-radius: 50%;
+        color: var(--color-text-secondary);
+        transition: all 0.2s ease-in-out;
+        border: none;
+        cursor: pointer;
+        outline: none;
+        background-color: var(--bg-color);
+        box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+      }
+      .btn-icon:hover {
+        color: var(--color-primary);
+        box-shadow: 3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light);
+      }
+      .btn-icon:active {
+        box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+      }
+
+
+      .form-input, select.form-input {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        background-color: var(--bg-color);
+        color: var(--color-text-primary);
+        width: 100%;
+        border-radius: 0.75rem; /* 12px */
+        padding: 0.75rem 1rem;
+        border: 2px solid var(--bg-color);
+        box-shadow: inset 5px 5px 10px var(--shadow-dark), inset -5px -5px 10px var(--shadow-light);
+        transition: all 0.2s ease;
+      }
+      .form-input:focus, select.form-input:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+      }
+      .form-input::placeholder {
+        color: var(--color-text-secondary);
+        opacity: 0.8;
+      }
+
+      .neumorphic-inset {
+        background-color: var(--bg-color);
+        border-radius: 0.75rem;
+        box-shadow: inset 6px 6px 12px var(--shadow-dark), inset -6px -6px 12px var(--shadow-light);
+      }
+      
+      .neumorphic-convex {
+        background-color: var(--bg-color);
+        border-radius: 0.75rem;
+        box-shadow: 6px 6px 12px var(--shadow-dark), -6px -6px 12px var(--shadow-light);
+      }
+
+      /* Scrollbar styles */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: var(--bg-color);
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--shadow-dark);
+        border-radius: 10px;
+        box-shadow: inset 1px 1px 2px var(--shadow-light), inset -1px -1px 2px var(--shadow-dark);
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--color-text-secondary);
+      }
+
+      /* Animation for Price Comparison */
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(15px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .comparison-item-enter {
+        animation: fadeInUp 0.5s ease-out forwards;
+        opacity: 0; /* Start hidden to prevent flash */
+      }
+      
+      .comparison-details {
+        overflow: hidden;
+        transition: max-height 0.4s ease-in-out, margin-top 0.4s ease-in-out;
+        max-height: 0;
+        margin-top: 0;
+      }
+
+      .comparison-details.expanded {
+        max-height: 500px; /* Large enough to accommodate content */
+        margin-top: 1rem; /* 16px */
+      }
+
+      /* Skeleton Loader Animation */
+      @keyframes shimmer {
+        0% { background-position: -1000px 0; }
+        100% { background-position: 1000px 0; }
+      }
+
+      .skeleton-loader {
+        animation: shimmer 2s infinite linear;
+        background: linear-gradient(to right, 
+          rgba(0,0,0,0) 20%, 
+          var(--shadow-dark) 50%, 
+          rgba(0,0,0,0) 80%);
+        background-size: 1000px 100%;
+        background-color: var(--shadow-dark);
+        opacity: 0.2;
+      }
+
+      .dark .skeleton-loader {
+        background: linear-gradient(to right, 
+          rgba(255,255,255,0) 20%, 
+          var(--dark-shadow-light) 50%, 
+          rgba(255,255,255,0) 80%);
+        background-size: 1000px 100%;
+        background-color: var(--dark-shadow-light);
+        opacity: 0.2;
+      }
+
+      /* New animation for skeleton loader comparison simulation */
+      @keyframes skeleton-comparison-show {
+        0%, 100% {
+          max-height: 4rem; /* 64px, initial collapsed height */
+        }
+        50% {
+          max-height: 14rem; /* ~224px, expanded height */
+        }
+      }
+
+      .skeleton-item-container {
+        animation: skeleton-comparison-show 4s infinite ease-in-out;
+        max-height: 4rem; /* Start collapsed */
+        overflow: hidden;
+      }
+
+      .skeleton-comparison-details {
+        padding-left: 1rem; /* 16px */
+        margin-left: 1rem; /* 16px */
+        border-left: 2px solid var(--shadow-dark);
+        opacity: 0.7; /* Make inner items slightly fainter */
+      }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+</body>
+</html>
